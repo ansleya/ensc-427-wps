@@ -15,7 +15,6 @@
 
 #include "ns3/applications-module.h"
 #include "ns3/core-module.h"
-#include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/network-module.h"
@@ -49,25 +48,31 @@ CourseChange (std::string context, Ptr<const MobilityModel> model)
 int
 main(int argc, char* argv[])
 {
-    bool verbose = true;
-    uint32_t nCsma = 3;
-    uint32_t nWifi = 3;
-    bool tracing = false;
+    //bool verbose = true;
+    //uint32_t nCsma = 3;
+    uint32_t nWifiClient = 1; // number of mall users
+    std::string traceFile = "scenario1.ns_movements"; // mobility model traces
+    //bool tracing = false;
+    std::string logFile = "test.txt";
 
     CommandLine cmd(__FILE__);
-    cmd.AddValue("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
-    cmd.AddValue("nWifi", "Number of wifi STA devices", nWifi);
-    cmd.AddValue("verbose", "Tell echo applications to log if true", verbose);
-    cmd.AddValue("tracing", "Enable pcap tracing", tracing);
+    cmd.AddValue("nWifiClient", "Number of wifi STA devices (# of people in the mall)", nWifiClient);
+    cmd.AddValue("traceFile","NS2 movement trace file from BonnMotion",traceFile);
+    //cmd.AddValue("verbose", "Tell echo applications to log if true", verbose);
+    //cmd.AddValue("tracing", "Enable pcap tracing", tracing);
 
     cmd.Parse(argc, argv);
+
+    if(traceFile.empty()) {
+        std::cout << "Usage of " << argv[0] << ":\n" << "./waf --run \"script --traceFile=/path/to/tracefile\"\n";
+    }
 
     // The underlying restriction of 18 is due to the grid position
     // allocator's configuration; the grid layout will exceed the
     // bounding box if more than 18 nodes are provided.
-    if (nWifi > 18)
+    /*if (nWifiClient > 18)
     {
-        std::cout << "nWifi should be 18 or less; otherwise grid layout exceeds the bounding box"
+        std::cout << "nWifiClient should be 18 or less; otherwise grid layout exceeds the bounding box"
                   << std::endl;
         return 1;
     }
@@ -77,31 +82,13 @@ main(int argc, char* argv[])
         LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
         LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
-
-    NodeContainer p2pNodes;
-    p2pNodes.Create(2);
-
-    PointToPointHelper pointToPoint;
-    pointToPoint.SetDeviceAttribute("DataRate", StringValue("5Mbps"));
-    pointToPoint.SetChannelAttribute("Delay", StringValue("2ms"));
-
-    NetDeviceContainer p2pDevices;
-    p2pDevices = pointToPoint.Install(p2pNodes);
-
-    NodeContainer csmaNodes;
-    csmaNodes.Add(p2pNodes.Get(1));
-    csmaNodes.Create(nCsma);
-
-    CsmaHelper csma;
-    csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
-    csma.SetChannelAttribute("Delay", TimeValue(NanoSeconds(6560)));
-
-    NetDeviceContainer csmaDevices;
-    csmaDevices = csma.Install(csmaNodes);
+    */
 
     NodeContainer wifiStaNodes;
-    wifiStaNodes.Create(nWifi);
-    NodeContainer wifiApNode = p2pNodes.Get(0);
+    wifiStaNodes.Create(nWifiClient);
+    NodeContainer wifiApNodeMinions;
+    wifiApNodeMinions.Create(4); // 4 RTT values
+
 
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
     YansWifiPhyHelper phy;
@@ -116,12 +103,17 @@ main(int argc, char* argv[])
     mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid), "ActiveProbing", BooleanValue(false));
     staDevices = wifi.Install(phy, mac, wifiStaNodes);
 
-    NetDeviceContainer apDevices;
+    NetDeviceContainer apDevicesMinions;
     mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
-    apDevices = wifi.Install(phy, mac, wifiApNode);
+    apDevicesMinions = wifi.Install(phy, mac, wifiApNodeMinions);
+
+    double deltaTime = 100;
+    Ptr<Node> n0 = wifiStaNodes.Get(0);
+    Ns2MobilityHelper ns2mobility = Ns2MobilityHelper(traceFile);
+    ns2mobility.Install(); //BonnMotion trace file installed to mall clients
+    //Simulator::Schedule(Seconds(0.0), &showPosition, n0, deltaTime);
 
     MobilityHelper mobility;
-
     mobility.SetPositionAllocator("ns3::GridPositionAllocator",
                                   "MinX",
                                   DoubleValue(0.0),
@@ -136,52 +128,42 @@ main(int argc, char* argv[])
                                   "LayoutType",
                                   StringValue("RowFirst"));
 
+    /*// old mobility
     mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
                               "Bounds",
                               RectangleValue(Rectangle(-50, 50, -50, 50)));
-    mobility.Install(wifiStaNodes);
+    mobility.Install(wifiStaNodes);*/
 
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(wifiApNode);
+    mobility.Install(wifiApNodeMinions);
 
     InternetStackHelper stack;
-    stack.Install(csmaNodes);
-    stack.Install(wifiApNode);
+   // stack.Install(csmaNodes);
+    stack.Install(wifiApNodeMinions);
     stack.Install(wifiStaNodes);
 
     Ipv4AddressHelper address;
 
-    address.SetBase("10.1.1.0", "255.255.255.0");
-    Ipv4InterfaceContainer p2pInterfaces;
-    p2pInterfaces = address.Assign(p2pDevices);
-
-    address.SetBase("10.1.2.0", "255.255.255.0");
-    Ipv4InterfaceContainer csmaInterfaces;
-    csmaInterfaces = address.Assign(csmaDevices);
-
     address.SetBase("10.1.3.0", "255.255.255.0");
-    address.Assign(staDevices);
-    address.Assign(apDevices);
+    Ipv4InterfaceContainer staInterfaces =  address.Assign(staDevices);
+    Ipv4InterfaceContainer apminionsInterfaces =  address.Assign(apDevicesMinions);
 
-    UdpEchoServerHelper echoServer(9);
-
-    ApplicationContainer serverApps = echoServer.Install(csmaNodes.Get(nCsma));
-    serverApps.Start(Seconds(1.0));
-    serverApps.Stop(Seconds(10.0));
-
-    UdpEchoClientHelper echoClient(csmaInterfaces.GetAddress(nCsma), 9);
-    echoClient.SetAttribute("MaxPackets", UintegerValue(1));
-    echoClient.SetAttribute("Interval", TimeValue(Seconds(1.0)));
-    echoClient.SetAttribute("PacketSize", UintegerValue(1024));
-
-    ApplicationContainer clientApps = echoClient.Install(wifiStaNodes.Get(nWifi - 1));
-    clientApps.Start(Seconds(2.0));
-    clientApps.Stop(Seconds(10.0));
+    ApplicationContainer clientApps;
+    V4PingHelper pingServer[4];
+    // install 4 ping applications to he phone client
+    for(int i = 0;i < 4; i++)
+    {
+        pingServer[i].SetAttribute("Remote",Ipv4AddressValue(wifiApNodeMinions.Get(i)));
+        clientApps = pingServer[i].Install(staInterfaces.GetAddress(0)); //port 9);
+        clientApps.Start(Seconds(1.0));
+        clientApps.Stop(Seconds(10.0));
+    }
 
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
     Simulator::Stop(Seconds(10.0));
 
+    /* old trace settings
     if (tracing)
     {
         phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
@@ -192,10 +174,18 @@ main(int argc, char* argv[])
 
     std::ostringstream oss;
     oss <<
-      "/NodeList/" << wifiStaNodes.Get (nWifi - 1)->GetId () <<
+      "/NodeList/" << wifiStaNodes.Get (nWifiClient - 1)->GetId () <<
       "/$ns3::MobilityModel/CourseChange";
 
-    Config::Connect (oss.str (), MakeCallback (&CourseChange));
+    Config::Connect (oss.str (), MakeCallback (&CourseChange));*/
+
+    // open log file for output
+    std::ofstream os;
+    os.open(logFile);
+
+    // Configure callback for logging
+    Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
+                    MakeBoundCallback(&CourseChange, &os));
 
     Simulator::Run();
     Simulator::Destroy();
