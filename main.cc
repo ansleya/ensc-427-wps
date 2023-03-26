@@ -21,6 +21,8 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/ssid.h"
 #include "ns3/yans-wifi-helper.h"
+#include "ns3/internet-apps-module.h"
+#include "ns3/v4ping-helper.h"
 
 // Default Network Topology
 //
@@ -37,12 +39,18 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("ThirdScriptExample");
 
-void
+/*(void
 CourseChange (std::string context, Ptr<const MobilityModel> model)
 {
   Vector position = model->GetPosition ();
   NS_LOG_UNCOND (context <<
     " x = " << position.x << ", y = " << position.y);
+}*/
+
+
+static void PingRtt (std::string context, Time rtt)
+{
+  std::cout << context << "=" << rtt.GetMilliSeconds () << " ms" << std::endl;
 }
 
 int
@@ -107,10 +115,10 @@ main(int argc, char* argv[])
     mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
     apDevicesMinions = wifi.Install(phy, mac, wifiApNodeMinions);
 
-    double deltaTime = 100;
-    Ptr<Node> n0 = wifiStaNodes.Get(0);
-    Ns2MobilityHelper ns2mobility = Ns2MobilityHelper(traceFile);
-    ns2mobility.Install(); //BonnMotion trace file installed to mall clients
+   // double deltaTime = 100;
+    //Ptr<Node> n0 = wifiStaNodes.Get(0);
+   // Ns2MobilityHelper ns2mobility = Ns2MobilityHelper(traceFile);
+   // ns2mobility.Install(); //BonnMotion trace file installed to mall clients
     //Simulator::Schedule(Seconds(0.0), &showPosition, n0, deltaTime);
 
     MobilityHelper mobility;
@@ -136,6 +144,7 @@ main(int argc, char* argv[])
 
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(wifiApNodeMinions);
+    mobility.Install(wifiStaNodes);
 
     InternetStackHelper stack;
    // stack.Install(csmaNodes);
@@ -149,19 +158,21 @@ main(int argc, char* argv[])
     Ipv4InterfaceContainer apminionsInterfaces =  address.Assign(apDevicesMinions);
 
     ApplicationContainer clientApps;
-    V4PingHelper pingServer[4];
-    // install 4 ping applications to he phone client
+
+
     for(int i = 0;i < 4; i++)
     {
-        pingServer[i].SetAttribute("Remote",Ipv4AddressValue(wifiApNodeMinions.Get(i)));
-        clientApps = pingServer[i].Install(staInterfaces.GetAddress(0)); //port 9);
-        clientApps.Start(Seconds(1.0));
-        clientApps.Stop(Seconds(10.0));
-    }
+        V4PingHelper pingServer(apminionsInterfaces.GetAddress (i));
+        // install 4 ping applications to he phone client
 
+        clientApps.Add(pingServer.Install(wifiStaNodes));
+        clientApps.Start(Seconds(i));
+        clientApps.Stop(Seconds(i+0.9));
+    }
+    //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    Simulator::Stop(Seconds(10.0));
+    Simulator::Stop(Seconds(20.0));
 
     /* old trace settings
     if (tracing)
@@ -184,8 +195,10 @@ main(int argc, char* argv[])
     os.open(logFile);
 
     // Configure callback for logging
-    Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
-                    MakeBoundCallback(&CourseChange, &os));
+    //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
+    //                MakeBoundCallback(&CourseChange, &os));
+    Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",
+                     MakeCallback (&PingRtt));
 
     Simulator::Run();
     Simulator::Destroy();
