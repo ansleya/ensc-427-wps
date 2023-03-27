@@ -15,7 +15,26 @@ def gps_solve(distances_to_station, stations_coordinates):
 	return minimize(error, x0, args=(stations_coordinates, distances_to_station), method='Nelder-Mead').x
 
 
+
+        
 if __name__ == "__main__":
+
+    # with open('filename.txt', 'r') as f: 
+
+    # # read in all lines from the file 
+    # lines = f.readlines() 
+
+    # # initialize an empty matrix to store the values 
+    # matrix = [] 
+
+    # # loop over each line 
+    # for line in lines: 
+    #     # split the line into a list of values 
+    #     values = line.strip().split(',') 
+
+    #     # append the list of values to the matrix 
+    #     matrix.append(values) 
+
 	stations = list(np.array([[1,1], [0,1], [1,0], [0,0]]))
 	distances_to_station = [0.1, 0.5, 0.5, 1.3]
 	print(gps_solve(distances_to_station, stations))
