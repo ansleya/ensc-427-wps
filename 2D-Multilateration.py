@@ -19,18 +19,18 @@ def gps_solve(distances_to_station, stations_coordinates):
         
 if __name__ == "__main__":
 
-    with open('filename.txt', 'r') as f: 
-	# read in all lines from the file 
-	lines = f.readlines() 
-	# initialize an empty matrix to store the values 
-	matrix = [] 
-	# loop over each line 
-	for line in lines: 
-		# split the line into a list of values 
-		values = line.strip().split(',') 
-		# append the list of values to the matrix 
-		matrix.append(values) 
-
+	with open('TraceData.txt', 'r') as f: 
+		# read in all lines from the file 
+		lines = f.readlines() 
+		# initialize an empty matrix to store the values 
+		matrix = [] 
+		# loop over each line 
+		for line in lines: 
+			# split the line into a list of values 
+			values = line.strip().split(',') 
+			# append the list of values to the matrix 
+			matrix.append(values) 
+	print(matrix)
 	stations = list(np.array([[0,1], [2,0], [1,-1], [1,1]]))
 	distances_to_station = [1.4142, 1, 1, 1]
 	print(gps_solve(distances_to_station, stations))
