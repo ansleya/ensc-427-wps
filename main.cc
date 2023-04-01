@@ -24,6 +24,10 @@
 #include "ns3/internet-apps-module.h"
 #include "ns3/v4ping-helper.h"
 
+#include <cstdlib>
+#include <fstream>
+#include <string>
+
 // Default Network Topology
 //
 //   Wifi 10.1.3.0
@@ -48,9 +52,40 @@ CourseChange (std::string context, Ptr<const MobilityModel> model)
 }*/
 
 
-static void PingRtt (std::string context, Time rtt)
+static void PingRtt (Ptr<OutputStreamWrapper> stream,std::string context, Time rtt)
 {
-  std::cout << context << "=" << rtt.GetMilliSeconds () << " ms" << std::endl;
+  double timeNow = Simulator::Now().GetSeconds();
+  char const* digits = "0123456789";
+  int clientNodeNum = -1;
+  int serverNodeNum = -1;
+  int pos = 0;
+  for(int i = 0; i < 2; i++)
+  {
+      int number;
+      std::size_t const n = context.find_first_of("0123456789",pos);
+      if (n != std::string::npos) // position is not -1
+      {
+        std::size_t const m = context.find_first_not_of(digits, n);
+        if(m != std::string::npos)
+        {
+            number = std::stoi(context.substr(n,n-m));
+            pos = m;
+        }
+        else
+        {
+            number = std::stoi(context.substr(n,m));
+            pos = m;
+        }
+
+        if(i == 0){clientNodeNum = number;}
+        else{serverNodeNum = number;}
+
+      }
+
+  }
+    //std::cout << context << "=" << rtt.GetNanoSeconds () << " ns" << std::endl;
+    *stream->GetStream() << std::to_string(timeNow) << "\t" << clientNodeNum << "\t"
+                         << serverNodeNum << "\t" << rtt.GetNanoSeconds () << std::endl;
 }
 
 int
@@ -121,30 +156,35 @@ main(int argc, char* argv[])
    // ns2mobility.Install(); //BonnMotion trace file installed to mall clients
     //Simulator::Schedule(Seconds(0.0), &showPosition, n0, deltaTime);
 
-    MobilityHelper mobility;
-    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
-                                  "MinX",
-                                  DoubleValue(0.0),
-                                  "MinY",
-                                  DoubleValue(0.0),
-                                  "DeltaX",
-                                  DoubleValue(5.0),
-                                  "DeltaY",
-                                  DoubleValue(10.0),
-                                  "GridWidth",
-                                  UintegerValue(3),
-                                  "LayoutType",
-                                  StringValue("RowFirst"));
+    MobilityHelper mobilityAP;
+    Ptr<ListPositionAllocator> positionAllocAP = CreateObject <ListPositionAllocator>();
+    positionAllocAP ->Add(Vector(12.5, 12.5, 0)); // node0
+    positionAllocAP ->Add(Vector(-12.5, 12.5, 0)); // node1
+    positionAllocAP ->Add(Vector(12.5, -12.5, 0)); // node2
+    positionAllocAP ->Add(Vector(-12.5, -12.5, 0)); // node3
+    mobilityAP.SetPositionAllocator(positionAllocAP);
+    mobilityAP.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobilityAP.Install(wifiApNodeMinions);
 
-    /*// old mobility
-    mobility.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-                              "Bounds",
-                              RectangleValue(Rectangle(-50, 50, -50, 50)));
-    mobility.Install(wifiStaNodes);*/
 
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(wifiApNodeMinions);
-    mobility.Install(wifiStaNodes);
+
+    MobilityHelper mobilitySTA;
+    Ptr<ListPositionAllocator> positionAllocSTA = CreateObject <ListPositionAllocator>();
+    /*srand(100); //set a seed for consistency
+    for(int i = 0; i < nWifiClient; i++)
+    {
+        float xstart = 25*((float) rand()/RAND_MAX - 0.5);
+        float ystart = 25*((float) rand()/RAND_MAX - 0.5);
+        positionAllocSTA ->Add(Vector(xstart, ystart, 0));
+    }
+    mobilitySTA.SetPositionAllocator(positionAllocSTA);
+    mobilitySTA.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobilitySTA.Install(wifiStaNodes);*/
+
+    positionAllocSTA ->Add(Vector(0, 0, 0));
+    mobilitySTA.SetPositionAllocator(positionAllocSTA);
+    mobilitySTA.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobilitySTA.Install(wifiStaNodes);
 
     InternetStackHelper stack;
    // stack.Install(csmaNodes);
@@ -164,10 +204,11 @@ main(int argc, char* argv[])
     {
         V4PingHelper pingServer(apminionsInterfaces.GetAddress (i));
         // install 4 ping applications to he phone client
-
+        pingServer.SetAttribute("Interval",TimeValue(Seconds(1.)));
+        //pingServer.SetAttribute("Verbose",BooleanValue(true));
         clientApps.Add(pingServer.Install(wifiStaNodes));
-        clientApps.Start(Seconds(i));
-        clientApps.Stop(Seconds(i+0.9));
+        clientApps.Start(Seconds(1.));
+        clientApps.Stop(Seconds(20.));
     }
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
@@ -191,14 +232,14 @@ main(int argc, char* argv[])
     Config::Connect (oss.str (), MakeCallback (&CourseChange));*/
 
     // open log file for output
-    std::ofstream os;
-    os.open(logFile);
+    AsciiTraceHelper asciiTraceHelper;
+    Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream("test.txt");
 
     // Configure callback for logging
     //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
     //                MakeBoundCallback(&CourseChange, &os));
     Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",
-                     MakeCallback (&PingRtt));
+                     MakeBoundCallback (&PingRtt,stream));
 
     Simulator::Run();
     Simulator::Destroy();
