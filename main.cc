@@ -213,7 +213,7 @@ main(int argc, char* argv[])
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    Simulator::Stop(Seconds(20.0));
+    Simulator::Stop(Seconds(40.0));
 
     /* old trace settings
     if (tracing)
