@@ -301,8 +301,8 @@ main(int argc, char* argv[])
     //std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyRxDrop/";
    // Config::Connect(packetDropContext,
     //                MakeBoundCallback(&RxDrop, streamPhyDrop));
-    *stream->GetStream() << std::to_string(nWifiClient) << std::endl;
-    *streamMobility->GetStream() << std::to_string(nWifiClient) << std::endl;
+    *stream->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" <<std::endl;
+    *streamMobility->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" << std::endl;
     //*streamPhyDrop->GetStream() << std::to_string(nWifiClient) << std::endl;
     Simulator::Run();
     Simulator::Destroy();
