@@ -44,6 +44,18 @@
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("ThirdScriptExample");
+/*
+int numPacketDrop = 0;
+static void
+RxDrop(Ptr<OutputStreamWrapper> stream, std::string context, Ptr<const Packet> p)
+{
+    double timeNow = Simulator::Now().GetSeconds();
+    numPacketDrop++;
+    *stream->GetStream() << std::to_string(timeNow) << "\t"
+                         << context << "\t"
+                         << std::to_string(numPacketDrop)
+                         << std::endl;
+}*/
 
 void
 CourseChange (Ptr<OutputStreamWrapper> stream, std::string context, Ptr<const MobilityModel> model)
@@ -138,6 +150,7 @@ main(int argc, char* argv[])
     wifiStaNodes.Create(nWifiClient);
     NodeContainer wifiApNodeMinions;
     wifiApNodeMinions.Create(1); // 4 RTT values
+
 
     //Config::SetDefault("ns3::WifiPhy::ChannelNumber",UintegerValue(4))
     YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
@@ -275,12 +288,22 @@ main(int argc, char* argv[])
     Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream(logFile);
     //Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream("test.txt");
     Ptr<OutputStreamWrapper> streamMobility = asciiTraceHelper.CreateFileStream("client0-pos.txt");
+
+    //std::string logFileDrops = "droppedPackets" + std::to_string(choiceServerNum);
+    //Ptr<OutputStreamWrapper> streamPhyDrop = asciiTraceHelper.CreateFileStream(logFileDrops);
+
     // Configure callback for logging
     Config::Connect("/NodeList/0/$ns3::MobilityModel/CourseChange",
                     MakeBoundCallback(&CourseChange, streamMobility));
     Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",
                      MakeBoundCallback (&PingRtt,stream));
 
+    //std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyRxDrop/";
+   // Config::Connect(packetDropContext,
+    //                MakeBoundCallback(&RxDrop, streamPhyDrop));
+    *stream->GetStream() << std::to_string(nWifiClient) << std::endl;
+    *streamMobility->GetStream() << std::to_string(nWifiClient) << std::endl;
+    //*streamPhyDrop->GetStream() << std::to_string(nWifiClient) << std::endl;
     Simulator::Run();
     Simulator::Destroy();
     std::cout << "Done Simulation with nWifiClient=" << std::to_string(nWifiClient) << ", router" << std::to_string(choiceServerNum) << std::endl;
