@@ -45,13 +45,14 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("ThirdScriptExample");
 
-/*(void
-CourseChange (std::string context, Ptr<const MobilityModel> model)
+void
+CourseChange (Ptr<OutputStreamWrapper> stream, std::string context, Ptr<const MobilityModel> model)
 {
+  double timeNow = Simulator::Now().GetSeconds();
   Vector position = model->GetPosition ();
-  NS_LOG_UNCOND (context <<
-    " x = " << position.x << ", y = " << position.y);
-}*/
+  *stream->GetStream() << std::to_string(timeNow) << "\t" << position.x << "\t" << position.y << std::endl;
+
+}
 int choiceServerNum = 0;
 
 static void PingRtt (Ptr<OutputStreamWrapper> stream,std::string context, Time rtt)
@@ -200,8 +201,8 @@ main(int argc, char* argv[])
 
     MobilityHelper mobilitySTA;
     Ptr<ListPositionAllocator> positionAllocSTA = CreateObject <ListPositionAllocator>();
-    if (nWifiClient > 1)
-    {
+    //if (nWifiClient > 1)
+    //{
         srand(100); //set a seed for consistency
         for(uint32_t i = 0; i < nWifiClient; i++)
         {
@@ -215,14 +216,14 @@ main(int argc, char* argv[])
                                      //"Pause", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
                                      "Bounds", StringValue("-12.5|12.5|-12.5|12.5"));
         mobilitySTA.Install(wifiStaNodes);
-    }
-    else // if there's only 1 node, place in the middle and keep constant
-    {
-        positionAllocSTA ->Add(Vector(0, 0, 0));
+    //}
+    //else // if there's only 1 node, place in the middle and keep constant
+    //{
+     /*   positionAllocSTA ->Add(Vector(0, 0, 0));
         mobilitySTA.SetPositionAllocator(positionAllocSTA);
         mobilitySTA.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-        mobilitySTA.Install(wifiStaNodes);
-    }
+        mobilitySTA.Install(wifiStaNodes);*/
+    //}
 
     InternetStackHelper stack;
    // stack.Install(csmaNodes);
@@ -243,7 +244,7 @@ main(int argc, char* argv[])
         V4PingHelper pingServer(apminionsInterfaces.GetAddress (0));
         // install 4 ping applications to he phone client
         pingServer.SetAttribute("Interval",TimeValue(Seconds(1.)));
-        pingServer.SetAttribute("Verbose",BooleanValue(true));
+        //pingServer.SetAttribute("Verbose",BooleanValue(true));
         clientApps = pingServer.Install(wifiStaNodes);
         clientApps.Start(Seconds(1.0));
         clientApps.Stop(Seconds(60.0));
@@ -273,14 +274,15 @@ main(int argc, char* argv[])
     AsciiTraceHelper asciiTraceHelper;
     Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream(logFile);
     //Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream("test.txt");
-
+    Ptr<OutputStreamWrapper> streamMobility = asciiTraceHelper.CreateFileStream("client0-pos.txt");
     // Configure callback for logging
-    //Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
-    //                MakeBoundCallback(&CourseChange, &os));
+    Config::Connect("/NodeList/0/$ns3::MobilityModel/CourseChange",
+                    MakeBoundCallback(&CourseChange, streamMobility));
     Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",
                      MakeBoundCallback (&PingRtt,stream));
 
     Simulator::Run();
     Simulator::Destroy();
+    std::cout << "Done Simulation with nWifiClient=" << std::to_string(nWifiClient) << ", router" << std::to_string(choiceServerNum) << std::endl;
     return 0;
 }
