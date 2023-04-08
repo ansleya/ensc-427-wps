@@ -30,6 +30,8 @@
 #include <fstream>
 #include <string>
 
+// comment out for testing
+#define MALL_CONFIG
 // Default Network Topology
 //
 //   Wifi 10.1.3.0
@@ -164,7 +166,7 @@ main(int argc, char* argv[])
     NetDeviceContainer staDevices;
     NetDeviceContainer apDevicesMinions;
 
-    WifiHelper wifi;
+    WifiHelper wifi; //Wifi 6, 5GHz, constant propagation delay, Friis loss model
 
 
     mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid), "ActiveProbing", BooleanValue(false));
@@ -173,29 +175,24 @@ main(int argc, char* argv[])
     mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
     apDevicesMinions = wifi.Install(phy, mac, wifiApNodeMinions);
 
-/*
-
-    MeshHelper meshBeacons = MeshHelper::Default();
-    meshBeacons.SetStackInstaller("ns3::Dot11sStack");
-
-    meshBeacons.SetSpreadInterfaceChannels(MeshHelper::ZERO_CHANNEL);
-    meshBeacons.SetMacType("RandomStart", TimeValue(Seconds(1.0)));
-    // Set number of interfaces - default is single-interface mesh point
-    meshBeacons.SetNumberOfInterfaces(4);
-
-    apDevicesMinions = meshBeacons.Install(phy, wifiApNodeMinions);
-*/
-    //mac.SetType("ns3::StaWifiMac", "Ssid", SsidValue(ssid));
-    //apDevicesMinions = wifi.Install(phy, mac, wifiApNodeMinions);
-
-   // double deltaTime = 100;
-    //Ptr<Node> n0 = wifiStaNodes.Get(0);
-   // Ns2MobilityHelper ns2mobility = Ns2MobilityHelper(traceFile);
-   // ns2mobility.Install(); //BonnMotion trace file installed to mall clients
-    //Simulator::Schedule(Seconds(0.0), &showPosition, n0, deltaTime);
-
     MobilityHelper mobilityAP;
     Ptr<ListPositionAllocator> positionAllocAP = CreateObject <ListPositionAllocator>();
+
+    double xposRout,yposRout;
+#ifdef MALL_CONFIG
+    if(choiceServerNum % 2 == 0)
+    {
+        xposRout = 2.5+25*choiceServerNum/2;
+        yposRout = 0.375;
+        positionAllocAP->Add(Vector(xposRout, yposRout, 0));
+    }
+    else
+    {
+        xposRout = 212.5+25*(choiceServerNum-1)/2;
+        yposRout = 11.25;
+        positionAllocAP->Add(Vector(xposRout, yposRout, 0));
+    }
+#else
     switch(choiceServerNum)
     {
         case 0:
@@ -207,36 +204,45 @@ main(int argc, char* argv[])
         case 3:
             positionAllocAP ->Add(Vector(-12.5, -12.5, 0)); // node3
     }
+
+#endif
+
     mobilityAP.SetPositionAllocator(positionAllocAP);
     mobilityAP.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobilityAP.Install(wifiApNodeMinions);
 
-
     MobilityHelper mobilitySTA;
     Ptr<ListPositionAllocator> positionAllocSTA = CreateObject <ListPositionAllocator>();
-    //if (nWifiClient > 1)
-    //{
-        srand(100); //set a seed for consistency
-        for(uint32_t i = 0; i < nWifiClient; i++)
-        {
-            float xstart = 25*((float) rand()/RAND_MAX - 0.5);
-            float ystart = 25*((float) rand()/RAND_MAX - 0.5);
-            positionAllocSTA ->Add(Vector(xstart, ystart, 0));
-        }
-        mobilitySTA.SetPositionAllocator(positionAllocSTA);
-        mobilitySTA.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-                                     "Speed", StringValue("ns3::UniformRandomVariable[Min=1.15|Max=1.65]"),
-                                     //"Pause", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
-                                     "Bounds", StringValue("-12.5|12.5|-12.5|12.5"));
-        mobilitySTA.Install(wifiStaNodes);
-    //}
-    //else // if there's only 1 node, place in the middle and keep constant
-    //{
-     /*   positionAllocSTA ->Add(Vector(0, 0, 0));
-        mobilitySTA.SetPositionAllocator(positionAllocSTA);
-        mobilitySTA.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-        mobilitySTA.Install(wifiStaNodes);*/
-    //}
+
+#ifdef MALL_CONFIG
+    srand(100); //set a seed for consistency
+    for(uint32_t i = 0; i < nWifiClient; i++)
+    {
+        float xstart =150*((float) rand()/RAND_MAX);
+        float ystart = 15*((float) rand()/RAND_MAX);
+        positionAllocSTA ->Add(Vector(xstart, ystart, 0));
+    }
+    mobilitySTA.SetPositionAllocator(positionAllocSTA);
+    mobilitySTA.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+                                 "Speed", StringValue("ns3::UniformRandomVariable[Min=1.15|Max=1.65]"),
+                                 //"Pause", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
+                                 "Bounds", StringValue("0|150|0|15"));
+    mobilitySTA.Install(wifiStaNodes);
+#else
+    srand(100); //set a seed for consistency
+    for(uint32_t i = 0; i < nWifiClient; i++)
+    {
+        float xstart = 25*((float) rand()/RAND_MAX - 0.5);
+        float ystart = 25*((float) rand()/RAND_MAX - 0.5);
+        positionAllocSTA ->Add(Vector(xstart, ystart, 0));
+    }
+    mobilitySTA.SetPositionAllocator(positionAllocSTA);
+    mobilitySTA.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+                                 "Speed", StringValue("ns3::UniformRandomVariable[Min=1.15|Max=1.65]"),
+                                 //"Pause", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
+                                 "Bounds", StringValue("-12.5|12.5|-12.5|12.5"));
+    mobilitySTA.Install(wifiStaNodes);
+#endif
 
     InternetStackHelper stack;
    // stack.Install(csmaNodes);
@@ -261,9 +267,10 @@ main(int argc, char* argv[])
     srand(100);
     for(int i = 0; i<nWifiClient;i++)
     {
-        clientApps[i].Add(pingServer.Install(wifiStaNodes.Get(i)));
-        clientApps[i].Start(Seconds(1.0+.05*i));
-        clientApps[i].Stop(Seconds(60.0));
+        clientApps.Add(pingServer.Install(wifiStaNodes.Get(i)));
+        float timeJitter = 0.8*((float) rand()/RAND_MAX);
+        clientApps.Start(Seconds(1.0+timeJitter));
+        clientApps.Stop(Seconds(60.0));
     }
     //}
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
@@ -305,7 +312,9 @@ main(int argc, char* argv[])
     //std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyRxDrop";
     //Config::Connect(packetDropContext,
     //                MakeBoundCallback(&RxDrop, streamPhyDrop));
-    *stream->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" <<std::endl;
+    *stream->GetStream() << std::to_string(nWifiClient) << "\t" << std::to_string(xposRout)
+                         << "\t" << std::to_string(yposRout)
+                         << "\t0" <<std::endl;
     *streamMobility->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" << std::endl;
     //FlowMonitorHelper flowHelper;
     //Ptr<FlowMonitor> flowMonitor = flowHelper. InstallAll();
@@ -313,6 +322,9 @@ main(int argc, char* argv[])
     Simulator::Run();
    // flowMonitor->SerializeToXmlFile("flowmonitor.xml",true,true);
     Simulator::Destroy();
-    std::cout << "Done Simulation with nWifiClient=" << std::to_string(nWifiClient) << ", router" << std::to_string(choiceServerNum) << std::endl;
+    std::cout << "Done Simulation with nWifiClient="
+              << std::to_string(nWifiClient)
+              << ", router" << std::to_string(choiceServerNum)
+              << " (" << std::to_string(xposRout) << "," << std::to_string(yposRout) << ")" << std::endl;
     return 0;
 }
