@@ -83,7 +83,6 @@ if __name__ == "__main__":
 	numPings = len(Router0)-1
 	numClients = int(float(Router0[0][0]))
 	DistMat= np.zeros((numPings,6))
-	actPos= np.zeros((numPings,6))
 
 
 	for i in range(numPings):
@@ -103,33 +102,47 @@ if __name__ == "__main__":
 
 	for i in range(numPings):
 		divnum = min(DistMat[i][2],DistMat[i][3],DistMat[i][4],DistMat[i][5])
-		DistMat[i][2] = (float(DistMat[i][2])-int(float(divnum)/1000)*1000)*.1*2.99/2/1.5
-		DistMat[i][3] = (float(DistMat[i][3])-int(float(divnum)/1000)*1000)*.1*2.99/2/1.5
-		DistMat[i][4] = (float(DistMat[i][4])-int(float(divnum)/1000)*1000)*.1*2.99/2/1.5
-		DistMat[i][5] = (float(DistMat[i][5])-int(float(divnum)/1000)*1000)*.1*2.99/2/1.5
+		DistMat[i][2] = (float(DistMat[i][2])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
+		DistMat[i][3] = (float(DistMat[i][3])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
+		DistMat[i][4] = (float(DistMat[i][4])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
+		DistMat[i][5] = (float(DistMat[i][5])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
 
 
 	np.set_printoptions(suppress=True)
 
 	# print(DistMat)
-
-	PosMat= np.zeros((numPings,6))
+	actualX = []
+	actualY = []
+	rttX = []
+	rttY = []
+	PosMat= np.zeros((numPings,4))
 	Routers = list(np.array([[12.5,12.5], [-12.5,12.5], [12.5,-12.5], [-12.5,-12.5]]))
 	for i in range(numPings):
 		distances_to_Routers = [DistMat[i][2], DistMat[i][3], DistMat[i][4], DistMat[i][5]]
 		a = gps_solve(distances_to_Routers, Routers)
 		PosMat[i][0] = DistMat[i][1]
 		PosMat[i][1] = DistMat[i][0]
+
 		PosMat[i][2] = a[0]
 		PosMat[i][3] = a[1]
-		PosMat[i][4] = float(actPos[i][1])
-		PosMat[i][5] = float(actPos[i][2])
+		
 
+		if(not(abs(a[0]) > 30 or abs(a[1]) > 30)):
+			rttX.append(a[0])
+			rttY.append(a[1])
+
+	for i in range(len(actPos)):	
+		actualX.append(float(actPos[i][1]))
+		actualY.append(float(actPos[i][2]))
 	
+	# print(actualX)
+	# print(actualY)
+	# print(rttX)
+	# print(rttY)
+	# print(PosMat)
 
-
-
-	plt.plot(PosMat[:][4],PosMat[:][5], label = "Actual")
-	plt.plot(PosMat[:][2],PosMat[:][3], label = "Calculated")
+	plt.plot(actualX,actualY,label = "Actual")
+	plt.plot(rttX,rttY, label = "Calculated")
 	plt.legend()
+	plt.grid()
 	plt.show()
