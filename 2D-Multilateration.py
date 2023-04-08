@@ -99,18 +99,19 @@ if __name__ == "__main__":
 		DistMat[index2][4] = float(Router2[n][3])
 		DistMat[index3][5] = float(Router3[n][3])
 
-
+	weight = 1.5
+	offset = 600
 	for i in range(numPings):
 		divnum = min(DistMat[i][2],DistMat[i][3],DistMat[i][4],DistMat[i][5])
-		DistMat[i][2] = (float(DistMat[i][2])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
-		DistMat[i][3] = (float(DistMat[i][3])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
-		DistMat[i][4] = (float(DistMat[i][4])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
-		DistMat[i][5] = (float(DistMat[i][5])-int(float(divnum)/500)*500)*.1*2.99/2/1.5
+		DistMat[i][2] = (float(DistMat[i][2])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
+		DistMat[i][3] = (float(DistMat[i][3])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
+		DistMat[i][4] = (float(DistMat[i][4])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
+		DistMat[i][5] = (float(DistMat[i][5])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
 
-
+	print(DistMat)
 	np.set_printoptions(suppress=True)
 
-	# print(DistMat)
+	print(DistMat)
 	actualX = []
 	actualY = []
 	rttX = []
@@ -127,7 +128,7 @@ if __name__ == "__main__":
 		PosMat[i][3] = a[1]
 		
 
-		if(not(abs(a[0]) > 30 or abs(a[1]) > 30)):
+		if(not(abs(a[0]) > 15 or abs(a[1]) > 15)):
 			rttX.append(a[0])
 			rttY.append(a[1])
 
