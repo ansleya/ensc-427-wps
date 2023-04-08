@@ -25,7 +25,7 @@
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/internet-apps-module.h"
 #include "ns3/v4ping-helper.h"
-
+#include "ns3/flow-monitor-helper.h"
 #include <cstdlib>
 #include <fstream>
 #include <string>
@@ -254,13 +254,18 @@ main(int argc, char* argv[])
 
     //for(int i = 0;i < 4; i++)
     //{
-        V4PingHelper pingServer(apminionsInterfaces.GetAddress (0));
-        // install 4 ping applications to he phone client
-        pingServer.SetAttribute("Interval",TimeValue(Seconds(1.)));
-        //pingServer.SetAttribute("Verbose",BooleanValue(true));
-        clientApps = pingServer.Install(wifiStaNodes);
-        clientApps.Start(Seconds(1.0));
+    V4PingHelper pingServer(apminionsInterfaces.GetAddress (0));
+    // install 4 ping applications to he phone client
+    pingServer.SetAttribute("Interval",TimeValue(Seconds(1.)));
+    //pingServer.SetAttribute("Verbose",BooleanValue(true));
+    srand(100);
+    for(int i = 0; i<nWifiClient;i++)
+    {
+        clientApps.Add(pingServer.Install(wifiStaNodes.Get(i)));
+        float timeJitter = 0.8*((float) rand()/RAND_MAX);
+        clientApps.Start(Seconds(1.0+timeJitter));
         clientApps.Stop(Seconds(60.0));
+    }
     //}
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
@@ -298,13 +303,16 @@ main(int argc, char* argv[])
     Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",
                      MakeBoundCallback (&PingRtt,stream));
 
-    //std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyRxDrop/";
-   // Config::Connect(packetDropContext,
+    //std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyRxDrop";
+    //Config::Connect(packetDropContext,
     //                MakeBoundCallback(&RxDrop, streamPhyDrop));
     *stream->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" <<std::endl;
     *streamMobility->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" << std::endl;
+    //FlowMonitorHelper flowHelper;
+    //Ptr<FlowMonitor> flowMonitor = flowHelper. InstallAll();
     //*streamPhyDrop->GetStream() << std::to_string(nWifiClient) << std::endl;
     Simulator::Run();
+   // flowMonitor->SerializeToXmlFile("flowmonitor.xml",true,true);
     Simulator::Destroy();
     std::cout << "Done Simulation with nWifiClient=" << std::to_string(nWifiClient) << ", router" << std::to_string(choiceServerNum) << std::endl;
     return 0;
