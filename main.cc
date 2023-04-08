@@ -249,7 +249,7 @@ main(int argc, char* argv[])
     Ipv4InterfaceContainer apminionsInterfaces =  address.Assign(apDevicesMinions);
     Ipv4InterfaceContainer staInterfaces =  address.Assign(staDevices);
 
-    ApplicationContainer clientApps;
+    ApplicationContainer clientApps[nWifiClient];
 
 
     //for(int i = 0;i < 4; i++)
@@ -261,10 +261,9 @@ main(int argc, char* argv[])
     srand(100);
     for(int i = 0; i<nWifiClient;i++)
     {
-        clientApps.Add(pingServer.Install(wifiStaNodes.Get(i)));
-        float timeJitter = 0.8*((float) rand()/RAND_MAX);
-        clientApps.Start(Seconds(1.0+timeJitter));
-        clientApps.Stop(Seconds(60.0));
+        clientApps[i].Add(pingServer.Install(wifiStaNodes.Get(i)));
+        clientApps[i].Start(Seconds(1.0+.05*i));
+        clientApps[i].Stop(Seconds(60.0));
     }
     //}
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"

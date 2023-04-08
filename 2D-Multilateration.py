@@ -100,7 +100,7 @@ if __name__ == "__main__":
 		DistMat[index3][5] = float(Router3[n][3])
 
 	weight = 1.5
-	offset = 600
+	offset = 500
 	for i in range(numPings):
 		divnum = min(DistMat[i][2],DistMat[i][3],DistMat[i][4],DistMat[i][5])
 		DistMat[i][2] = (float(DistMat[i][2])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 		DistMat[i][4] = (float(DistMat[i][4])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
 		DistMat[i][5] = (float(DistMat[i][5])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
 
-	print(DistMat)
+	
 	np.set_printoptions(suppress=True)
 
 	print(DistMat)
