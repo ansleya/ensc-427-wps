@@ -182,13 +182,13 @@ main(int argc, char* argv[])
 #ifdef MALL_CONFIG
     if(choiceServerNum % 2 == 0)
     {
-        xposRout = 2.5+25*choiceServerNum/2;
+        xposRout = 12.5+25*choiceServerNum/2;
         yposRout = 0.375;
         positionAllocAP->Add(Vector(xposRout, yposRout, 0));
     }
     else
     {
-        xposRout = 212.5+25*(choiceServerNum-1)/2;
+        xposRout = 12.5+25*(choiceServerNum-1)/2;
         yposRout = 11.25;
         positionAllocAP->Add(Vector(xposRout, yposRout, 0));
     }
@@ -267,16 +267,16 @@ main(int argc, char* argv[])
     srand(100);
     for(int i = 0; i<nWifiClient;i++)
     {
-        clientApps.Add(pingServer.Install(wifiStaNodes.Get(i)));
-        float timeJitter = 0.8*((float) rand()/RAND_MAX);
-        clientApps.Start(Seconds(1.0+timeJitter));
-        clientApps.Stop(Seconds(60.0));
+        clientApps[i].Add(pingServer.Install(wifiStaNodes.Get(i)));
+        clientApps[i].Start(Seconds(1.0+.05*i));
+        clientApps[i].Stop(Seconds(60.0));
     }
     //}
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    Simulator::Stop(Seconds(60.0));
+    uint32_t simTime = 60;
+    Simulator::Stop(Seconds(simTime));
 
     /* old trace settings
     if (tracing)
@@ -314,8 +314,9 @@ main(int argc, char* argv[])
     //                MakeBoundCallback(&RxDrop, streamPhyDrop));
     *stream->GetStream() << std::to_string(nWifiClient) << "\t" << std::to_string(xposRout)
                          << "\t" << std::to_string(yposRout)
-                         << "\t0" <<std::endl;
-    *streamMobility->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t0" << std::endl;
+                         << "\t" << std::to_string((simTime - 1)*nWifiClient) <<std::endl;
+
+    *streamMobility->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t" << std::to_string((simTime - 1)*nWifiClient) << std::endl;
     //FlowMonitorHelper flowHelper;
     //Ptr<FlowMonitor> flowMonitor = flowHelper. InstallAll();
     //*streamPhyDrop->GetStream() << std::to_string(nWifiClient) << std::endl;
