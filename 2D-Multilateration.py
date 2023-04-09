@@ -97,7 +97,7 @@ if __name__ == "__main__":
 	rttX = []
 	rttY = []
 	PosMat= np.zeros((numPings,4))
-	print(DistMat)
+	# print(DistMat)
 
 	for i in range(numPings):
 		Routers = list(np.array([[DistMat[i][3],DistMat[i][4]], [DistMat[i][6],DistMat[i][7]], [DistMat[i][9],DistMat[i][10]], [DistMat[i][12],DistMat[i][13]]]))
@@ -114,15 +114,15 @@ if __name__ == "__main__":
 			rttX.append(a[0])
 			rttY.append(a[1])
 
-	for i in range(len(actPos)):	
-		actualX.append(float(actPos[i][1]))
-		actualY.append(float(actPos[i][2]))
+	for i in range(len(actPos)-1):	
+		actualX.append(float(actPos[i+1][1]))
+		actualY.append(float(actPos[i+1][2]))
 	
 	# print(actualX)
 	# print(actualY)
 	# print(rttX)
 	# print(rttY)
-	print(PosMat)
+	# print(PosMat)
 
 	plt.plot(actualX,actualY,label = "Actual")
 	plt.plot(rttX,rttY, label = "Calculated")

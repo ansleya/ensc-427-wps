@@ -257,7 +257,7 @@ main(int argc, char* argv[])
 
     ApplicationContainer clientApps[nWifiClient];
 
-
+    uint32_t simTime = 120;
     //for(int i = 0;i < 4; i++)
     //{
     V4PingHelper pingServer(apminionsInterfaces.GetAddress (0));
@@ -269,13 +269,13 @@ main(int argc, char* argv[])
     {
         clientApps[i].Add(pingServer.Install(wifiStaNodes.Get(i)));
         clientApps[i].Start(Seconds(1.0+.05*i));
-        clientApps[i].Stop(Seconds(60.0));
+        clientApps[i].Stop(Seconds(simTime));
     }
     //}
     //"/NodeList/[i]/ApplicationList/[i]/$ns3::V4Ping"
     Ipv4GlobalRoutingHelper::PopulateRoutingTables();
 
-    uint32_t simTime = 60;
+    
     Simulator::Stop(Seconds(simTime));
 
     /* old trace settings
