@@ -1,8 +1,10 @@
 from scipy.optimize import minimize
 import numpy as np
+import sys
 import matplotlib.pyplot as plt
 
 def gps_solve(distances_to_Routers, Router_coordinates):
+	# referenced from : github.com/glucee/Multilateration
 	def error(x, c, r):
 		return sum([(np.linalg.norm(x - c[i]) - r[i]) ** 2 for i in range(len(c))])
 
@@ -21,6 +23,8 @@ def gps_solve(distances_to_Routers, Router_coordinates):
 if __name__ == "__main__":
 
 	np.set_printoptions(suppress=True)
+	np.set_printoptions(threshold= sys.maxsize)
+
 	with open('client0-pos.txt', 'r') as f: 
 		# read in all lines from the file 
 		lines = f.readlines() 
@@ -55,8 +59,6 @@ if __name__ == "__main__":
 	numClients = int(float(actPos[0][0]))
 	DistMat= np.zeros((numPings,14))
 	RTTs = np.array(np.zeros((numRouters)))
-	weight = 1.5
-	offset = 500
 	
 	for i in range(numPings):
 
@@ -66,25 +68,25 @@ if __name__ == "__main__":
 			RTTs[j] = RoutersBaseMat[j][i+1][3]
 
 		idx_sorted = np.argsort(RTTs)
-
 		sorted_Rtts = RTTs[idx_sorted]
-		Router_sorted = np.arange(len(RTTs))
 
+		RouterArr = np.zeros(4)
 		count = 0	
 
 		for j in range(len(RTTs)):
 			if (sorted_Rtts[j] > 0 and count <4):
-				DistMat[i][3*count+2] = float(sorted_Rtts[j])
-				DistMat[i][3*count+3] = float(RoutersBaseMat[idx_sorted[j]][0][1])
-				DistMat[i][3*count+4] = float(RoutersBaseMat[idx_sorted[j]][0][2])
+				
+				RouterArr[count] = idx_sorted[j]
+				index = int(int(float(RoutersBaseMat[idx_sorted[j]][i+1][1]))*numPings/numClients+int(float(RoutersBaseMat[idx_sorted[j]][i+1][0])-1))
+				DistMat[index][3*count+2] = float(sorted_Rtts[j])
+				DistMat[index][3*count+3] = float(RoutersBaseMat[idx_sorted[j]][0][1])
+				DistMat[index][3*count+4] = float(RoutersBaseMat[idx_sorted[j]][0][2])
+
 				count += 1
-		
 
-		# index0 = int(int(float(Router0[n][1]))*numPings/numClients+int(float(Router0[n][0])-1))
-		# index1 = int(int(float(Router1[n][1]))*numPings/numClients+int(float(Router0[n][0])-1))
-		# index2 = int(int(float(Router2[n][1]))*numPings/numClients+int(float(Router0[n][0])-1))
-		# index3 = int(int(float(Router3[n][1]))*numPings/numClients+int(float(Router0[n][0])-1))
 
+	weight = 1.5
+	offset = 500
 	for i in range(numPings):
 		divnum = min(DistMat[i][2],DistMat[i][5],DistMat[i][8],DistMat[i][11])
 		DistMat[i][2] = (float(DistMat[i][2])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
@@ -92,32 +94,59 @@ if __name__ == "__main__":
 		DistMat[i][8] = (float(DistMat[i][8])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
 		DistMat[i][11] = (float(DistMat[i][11])-int(float(divnum)/offset)*offset)*.1*2.99/2/weight
 
-	actualX = []
-	actualY = []
-	rttX = []
-	rttY = []
-	PosMat= np.zeros((numPings,4))
-	# print(DistMat)
-
-	for i in range(numPings):
-		Routers = list(np.array([[DistMat[i][3],DistMat[i][4]], [DistMat[i][6],DistMat[i][7]], [DistMat[i][9],DistMat[i][10]], [DistMat[i][12],DistMat[i][13]]]))
-		distances_to_Routers = [DistMat[i][2], DistMat[i][5], DistMat[i][8], DistMat[i][11]]
-		a = gps_solve(distances_to_Routers, Routers)
-		PosMat[i][0] = DistMat[i][1]
-		PosMat[i][1] = DistMat[i][0]
-
-		PosMat[i][2] = a[0]
-		PosMat[i][3] = a[1]
 		
 
-		if((a[0] >= 0  and a[0] <= 150) and (a[1] > 0 and a[1] < 15) ):
-			rttX.append(a[0])
-			rttY.append(a[1])
+	actualX = []
+	actualY = []
+	rttX = np.zeros((numClients,numPings))
+	rttY = np.zeros((numClients,numPings))
+
+	PosMat= np.zeros((numPings,4))
+	prevX = 0
+	prevY = 0
+	
+
+	for k in range(numClients):
+		for j in range(int(numPings/numClients)):
+			i = int(k*numPings/numClients+j)
+
+			Routers = list(np.array([[DistMat[i][3],DistMat[i][4]], [DistMat[i][6],DistMat[i][7]], [DistMat[i][9],DistMat[i][10]], [DistMat[i][12],DistMat[i][13]]]))
+			distances_to_Routers = [DistMat[i][2], DistMat[i][5], DistMat[i][8], DistMat[i][11]]
+			a = gps_solve(distances_to_Routers, Routers)
+			PosMat[i][0] = DistMat[i][0]
+			PosMat[i][1] = DistMat[i][1]
+
+			PosMat[i][2] = a[0]
+			PosMat[i][3] = a[1]
+
+			counter = np.zeros((numClients))
+			if( i < 3 and (a[0] > 0  and a[0] < 150) and (a[1] > 0 and a[1] < 15)):
+				rttX[k][j] = a[0] 
+				rttY[k][j] = a[1]
+				prevX = a[0]
+				prevY = a[1]
+			elif(((a[0] > 0  and a[0] < 150) and (a[1] > 0 and a[1] < 15) and abs(prevX-a[0])<10 and abs(prevY-a[1]) <10)):
+
+				rttX[k][j] = a[0] 
+				rttY[k][j] = a[1]
+				prevX = a[0]
+				prevY = a[1]
+
+			else:
+				rttX[k][j] = prevX
+				rttY[k][j] = prevY
 
 	for i in range(len(actPos)-1):	
 		actualX.append(float(actPos[i+1][1]))
 		actualY.append(float(actPos[i+1][2]))
-	
+
+	RTTx0 = []
+	RTTy0 = []
+	for i in range(len(rttX[0])):	
+		if (rttX[0][i]>0 and rttY[k][i]>0):
+			RTTx0.append(rttX[0][i])
+			RTTy0.append(rttY[0][i])
+
 	# print(actualX)
 	# print(actualY)
 	# print(rttX)
@@ -125,7 +154,7 @@ if __name__ == "__main__":
 	# print(PosMat)
 
 	plt.plot(actualX,actualY,label = "Actual")
-	plt.plot(rttX,rttY, label = "Calculated")
+	plt.plot(RTTx0,RTTy0, label = "Calculated")
 	plt.legend()
 	plt.grid()
 	plt.show()
