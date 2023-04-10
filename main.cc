@@ -45,8 +45,8 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ThirdScriptExample");
-/*
+NS_LOG_COMPONENT_DEFINE("WPS");
+
 int numPacketDrop = 0;
 static void
 RxDrop(Ptr<OutputStreamWrapper> stream, std::string context, Ptr<const Packet> p)
@@ -57,7 +57,7 @@ RxDrop(Ptr<OutputStreamWrapper> stream, std::string context, Ptr<const Packet> p
                          << context << "\t"
                          << std::to_string(numPacketDrop)
                          << std::endl;
-}*/
+}
 
 void
 CourseChange (Ptr<OutputStreamWrapper> stream, std::string context, Ptr<const MobilityModel> model)
@@ -131,22 +131,7 @@ main(int argc, char* argv[])
     std::string logFile = "router" + std::to_string(choiceServerNum) + ".txt";
 
 
-    // The underlying restriction of 18 is due to the grid position
-    // allocator's configuration; the grid layout will exceed the
-    // bounding box if more than 18 nodes are provided.
-    /*if (nWifiClient > 18)
-    {
-        std::cout << "nWifiClient should be 18 or less; otherwise grid layout exceeds the bounding box"
-                  << std::endl;
-        return 1;
-    }
-
-    if (verbose)
-    {
-        LogComponentEnable("UdpEchoClientApplication", LOG_LEVEL_INFO);
-        LogComponentEnable("UdpEchoServerApplication", LOG_LEVEL_INFO);
-    }
-    */
+    LogComponentEnable("WPS", LOG_LEVEL_INFO);
 
     NodeContainer wifiStaNodes;
     wifiStaNodes.Create(nWifiClient);
@@ -223,11 +208,18 @@ main(int argc, char* argv[])
         positionAllocSTA ->Add(Vector(xstart, ystart, 0));
     }
     mobilitySTA.SetPositionAllocator(positionAllocSTA);
-    mobilitySTA.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
-                                 "Speed", StringValue("ns3::UniformRandomVariable[Min=1.15|Max=1.65]"),
-                                 //"Pause", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
-                                 "Bounds", StringValue("0|150|0|15"));
-    mobilitySTA.Install(wifiStaNodes);
+    for(int i = 0; i < nWifiClient;i++)
+    {
+        std::string randSpeed = "ns3::UniformRandomVariable[Min=1.15|Max=1.65|Stream=" + std::to_string(i+1) + "]";
+        std::string randDirection = "ns3::UniformRandomVariable[Min=0.0|Max=6.283184|Stream=" + std::to_string(i+1) + "]";
+
+        mobilitySTA.SetMobilityModel("ns3::RandomWalk2dMobilityModel",
+                                     "Speed", StringValue(randSpeed),
+                                     "Direction", StringValue(randDirection),
+                                     //"Pause", StringValue("ns3::ConstantRandomVariable[Constant=2]"),
+                                     "Bounds", StringValue("0|150|0|15"));
+        mobilitySTA.Install(wifiStaNodes.Get(i));
+    }
 #else
     srand(100); //set a seed for consistency
     for(uint32_t i = 0; i < nWifiClient; i++)
@@ -278,21 +270,7 @@ main(int argc, char* argv[])
     
     Simulator::Stop(Seconds(simTime));
 
-    /* old trace settings
-    if (tracing)
-    {
-        phy.SetPcapDataLinkType(WifiPhyHelper::DLT_IEEE802_11_RADIO);
-        pointToPoint.EnablePcapAll("third");
-        phy.EnablePcap("third", apDevices.Get(0));
-        csma.EnablePcap("third", csmaDevices.Get(0), true);
-    }
 
-    std::ostringstream oss;
-    oss <<
-      "/NodeList/" << wifiStaNodes.Get (nWifiClient - 1)->GetId () <<
-      "/$ns3::MobilityModel/CourseChange";
-
-    Config::Connect (oss.str (), MakeCallback (&CourseChange));*/
 
     // open log file for output
     AsciiTraceHelper asciiTraceHelper;
@@ -300,28 +278,27 @@ main(int argc, char* argv[])
     //Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream("test.txt");
     Ptr<OutputStreamWrapper> streamMobility = asciiTraceHelper.CreateFileStream("client0-pos.txt");
 
-    //std::string logFileDrops = "droppedPackets" + std::to_string(choiceServerNum);
-    //Ptr<OutputStreamWrapper> streamPhyDrop = asciiTraceHelper.CreateFileStream(logFileDrops);
+    std::string logFileDrops = "droppedPackets" + std::to_string(choiceServerNum);
+    Ptr<OutputStreamWrapper> streamPhyDrop = asciiTraceHelper.CreateFileStream(logFileDrops);
 
     // Configure callback for logging
     Config::Connect("/NodeList/0/$ns3::MobilityModel/CourseChange",
                     MakeBoundCallback(&CourseChange, streamMobility));
     Config::Connect ("/NodeList/*/ApplicationList/*/$ns3::V4Ping/Rtt",
                      MakeBoundCallback (&PingRtt,stream));
+    //Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Mac/MacPromiscRx",
+    //                 MakeBoundCallback(&RxDrop, streamPhyDrop));
 
-    //std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyRxDrop";
+   // std::string packetDropContext = "/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/$ns3::YansWifiPhy/PhyRxDrop";
     //Config::Connect(packetDropContext,
-    //                MakeBoundCallback(&RxDrop, streamPhyDrop));
+     //               MakeBoundCallback(&RxDrop, streamPhyDrop));
     *stream->GetStream() << std::to_string(nWifiClient) << "\t" << std::to_string(xposRout)
                          << "\t" << std::to_string(yposRout)
                          << "\t" << std::to_string((simTime - 1)*nWifiClient) <<std::endl;
 
     *streamMobility->GetStream() << std::to_string(nWifiClient) << "\t0" << "\t0" <<"\t" << std::to_string((simTime - 1)*nWifiClient) << std::endl;
-    //FlowMonitorHelper flowHelper;
-    //Ptr<FlowMonitor> flowMonitor = flowHelper. InstallAll();
-    //*streamPhyDrop->GetStream() << std::to_string(nWifiClient) << std::endl;
+    *streamPhyDrop->GetStream() << std::to_string(nWifiClient) << std::endl;
     Simulator::Run();
-   // flowMonitor->SerializeToXmlFile("flowmonitor.xml",true,true);
     Simulator::Destroy();
     std::cout << "Done Simulation with nWifiClient="
               << std::to_string(nWifiClient)
