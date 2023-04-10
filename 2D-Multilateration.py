@@ -43,6 +43,7 @@ if __name__ == "__main__":
 	RoutersBaseMat = [[[0 for k in range(4)] for j in range(numPings+1)] for i in range(numRouters)]
 	tempIter = 0
 
+	numClients = int(float(actPos[0][0]))
 	# Router(matrix), Ping(line), data(element)
 	
 	for i in range(numRouters):
@@ -50,13 +51,17 @@ if __name__ == "__main__":
 		with open(filename, 'r') as f: 
 			for line in f:
 				values = line.strip().split('\t') 
-				RoutersBaseMat[i][tempIter] = values
+				index = int((int(float(values[0]))-1)*numClients+int(float(values[1]))+1)
+				if tempIter == 0:
+					
+					RoutersBaseMat[i][0] = values
+				else:
+					RoutersBaseMat[i][index] = values
+
 				tempIter +=1
-				
+
 		tempIter = 0
-
-
-	numClients = int(float(actPos[0][0]))
+	
 	DistMat= np.zeros((numPings,14))
 	RTTs = np.array(np.zeros((numRouters)))
 	
@@ -81,9 +86,9 @@ if __name__ == "__main__":
 				DistMat[index][3*count+2] = float(sorted_Rtts[j])
 				DistMat[index][3*count+3] = float(RoutersBaseMat[idx_sorted[j]][0][1])
 				DistMat[index][3*count+4] = float(RoutersBaseMat[idx_sorted[j]][0][2])
-
 				count += 1
 
+	
 
 	weight = 1.5
 	offset = 500
@@ -143,7 +148,7 @@ if __name__ == "__main__":
 	RTTx0 = []
 	RTTy0 = []
 	for i in range(len(rttX[0])):	
-		if (rttX[0][i]>0 and rttY[k][i]>0):
+		if (rttX[0][i]>0 and rttY[0][i]>0):
 			RTTx0.append(rttX[0][i])
 			RTTy0.append(rttY[0][i])
 
@@ -153,8 +158,12 @@ if __name__ == "__main__":
 	# print(rttY)
 	# print(PosMat)
 
+	# for i in range(numClients):
+	# 	name = 'Client' + str(i)
+	# 	plt.plot(rttX[i],rttY[i], label = name)
+
+	plt.plot(RTTx0,RTTy0,label = "Client0")
 	plt.plot(actualX,actualY,label = "Actual")
-	plt.plot(RTTx0,RTTy0, label = "Calculated")
 	plt.legend()
 	plt.grid()
 	plt.show()
