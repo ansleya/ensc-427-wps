@@ -1,5 +1,6 @@
 from scipy.optimize import minimize
 import numpy as np
+import math
 import sys
 import matplotlib.pyplot as plt
 
@@ -101,10 +102,9 @@ if __name__ == "__main__":
 
 		
 
-	actualX = []
-	actualY = []
-	rttX = np.zeros((numClients,numPings))
-	rttY = np.zeros((numClients,numPings))
+	rttX = np.zeros((numClients,int(numPings/numClients)))
+	rttY = np.zeros((numClients,int(numPings/numClients)))
+	rttTime = np.zeros((numClients,int(numPings/numClients)))
 
 	PosMat= np.zeros((numPings,4))
 	prevX = 0
@@ -123,8 +123,8 @@ if __name__ == "__main__":
 
 			PosMat[i][2] = a[0]
 			PosMat[i][3] = a[1]
+			rttTime[k][j] = int(float(DistMat[i][0]))
 
-			counter = np.zeros((numClients))
 			if( i < 3 and (a[0] > 0  and a[0] < 150) and (a[1] > 0 and a[1] < 15)):
 				rttX[k][j] = a[0] 
 				rttY[k][j] = a[1]
@@ -141,22 +141,45 @@ if __name__ == "__main__":
 				rttX[k][j] = prevX
 				rttY[k][j] = prevY
 
+
+	actualX = []
+	actualY = []
+	actualTime = []
+	prevTime = 0
+	curTime = 0
 	for i in range(len(actPos)-1):	
-		actualX.append(float(actPos[i+1][1]))
-		actualY.append(float(actPos[i+1][2]))
+		curTime = int(float(actPos[i+1][0]))
+		if (curTime != prevTime):
+			actualX.append(float(actPos[i+1][1]))
+			actualY.append(float(actPos[i+1][2]))
+			actualTime.append(int(float(actPos[i+1][0])))
+			prevTime = curTime
+
 
 	RTTx0 = []
 	RTTy0 = []
+	erare = 0
 	for i in range(len(rttX[0])):	
+		erare +=1
 		if (rttX[0][i]>0 and rttY[0][i]>0):
 			RTTx0.append(rttX[0][i])
 			RTTy0.append(rttY[0][i])
 
-	# print(actualX)
-	# print(actualY)
-	# print(rttX)
-	# print(rttY)
-	# print(PosMat)
+
+	# calculated = 0
+	meanXAccuracy = 0
+	meanYAccuracy = 0
+	
+	for i in range(len(actualX)):
+			meanXAccuracy += abs(rttX[0][i]- actualX[i])
+			meanYAccuracy += abs(rttY[0][i]- actualY[i])
+
+	meanXAccuracy = meanXAccuracy/len(actualX)
+	meanYAccuracy = meanYAccuracy/len(actualY)
+	mean2Acc = math.sqrt(meanXAccuracy**2+meanYAccuracy**2)
+
+	print(mean2Acc)
+
 
 	# for i in range(numClients):
 	# 	name = 'Client' + str(i)
@@ -164,6 +187,9 @@ if __name__ == "__main__":
 
 	plt.plot(RTTx0,RTTy0,label = "Client0")
 	plt.plot(actualX,actualY,label = "Actual")
+	plt.xlabel("X-position [m]")
+	plt.ylabel("Y-position [m]")
 	plt.legend()
 	plt.grid()
 	plt.show()
+

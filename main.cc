@@ -200,7 +200,7 @@ main(int argc, char* argv[])
     Ptr<ListPositionAllocator> positionAllocSTA = CreateObject <ListPositionAllocator>();
 
 #ifdef MALL_CONFIG
-    srand(100); //set a seed for consistency
+    srand(125); //set a seed for consistency
     for(uint32_t i = 0; i < nWifiClient; i++)
     {
         float xstart =150*((float) rand()/RAND_MAX);
